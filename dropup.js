@@ -1,5 +1,22 @@
 (function($) {
-$opts = {
+$.fn.dropup = function($o) {
+	var _o = $.extend({}, $.fn.dropup.opts, $o);
+
+	_o.max_file_size = _o.max_file_size * 1048576;
+	this.get(0).addEventListener('drop', $.fn.dropup.drop_handler, true);
+
+	$(this).bind('dragenter dragover dragleave',
+		$.fn.dropup.local_handlers);
+
+	$('body').bind('drop dragenter dragover dragleave',
+		$.fn.dropup.global_handlers);
+
+	$.fn.dropup.opts = _o;
+
+	return true;
+};
+
+$.fn.dropup.opts = {
 	url: '',
 	name: 'file',
 	max_files: 15,
@@ -12,37 +29,23 @@ $opts = {
 	}
 };
 
-$.fn.dropup = function($o) {
-	$opts = $.extend({}, $opts, $o);
-
-	$opts.max_file_size = $opts.max_file_size * 1048576;
-	this.get(0).addEventListener('drop', $.fn.dropup.drop_handler, true);
-
-	$(this).bind('dragenter dragover dragleave',
-		$.fn.dropup.local_handlers);
-
-	$('body').bind('drop dragenter dragover dragleave',
-		$.fn.dropup.global_handlers);
-
-	return true;
-};
-
 $.fn.dropup.local_handlers = function($e) {
+	var _o = $.fn.dropup.opts;
 	switch ($e.type) {
 		case 'dragenter':
-			clearTimeout($opts.timer);
+			clearTimeout(_o.timer);
 			$e.preventDefault();
-			if ($.isFunction($opts.on_enter)) { $opts.on_enter($e); }
+			if ($.isFunction(_o.on_enter)) { _o.on_enter($e); }
 			break;
 		case 'dragover':
-			clearTimeout($opts.timer);
+			clearTimeout(_o.timer);
 			$e.preventDefault();
-			if ($.isFunction($opts.on_g_over)) { $opts.on_g_over($e); }
-			if ($.isFunction($opts.on_over)) { $opts.on_over($e); }
+			if ($.isFunction(_o.on_g_over)) { _o.on_g_over($e); }
+			if ($.isFunction(_o.on_over)) { _o.on_over($e); }
 			break;
 		case 'dragleave':
-			clearTimeout($opts.timer);
-			if ($.isFunction($opts.on_leave)) { $opts.on_leave($e); }
+			clearTimeout(_o.timer);
+			if ($.isFunction(_o.on_leave)) { _o.on_leave($e); }
 			$e.stopPropagation();
 			break;
 	}
@@ -50,35 +53,36 @@ $.fn.dropup.local_handlers = function($e) {
 };
 
 $.fn.dropup.global_handlers = function($e) {
+	var _o = $.fn.dropup.opts;
 	switch ($e.type) {
 		case 'dragenter':
-			clearTimeout($opts.timer);
+			clearTimeout(_o.timer);
 			$e.preventDefault();
-			if ($.isFunction($opts.on_g_enter) && !$opts.docenter) {
-				$opts.docenter = true;
-				$opts.on_g_enter($e);
+			if ($.isFunction(_o.on_g_enter) && !_o.docenter) {
+				_o.docenter = true;
+				_o.on_g_enter($e);
 			}
 			break;
 		case 'dragover':
-			clearTimeout($opts.timer);
+			clearTimeout(_o.timer);
 			$e.preventDefault();
-			if ($.isFunction($opts.on_g_over)) { $opts.on_g_over($e); }
+			if ($.isFunction(_o.on_g_over)) { _o.on_g_over($e); }
 			break;
 		case 'dragleave':
-			$opts.timer = setTimeout(function() {
-				if ($.isFunction($opts.on_g_leave)) { $opts.on_g_leave($e); }
+			_o.timer = setTimeout(function() {
+				if ($.isFunction(_o.on_g_leave)) { _o.on_g_leave($e); }
 			},200);
 			break;
 		case 'drop':
-			if ($.isFunction($opts.on_g_leave)) { $opts.on_g_leave($e); }
-			$opts.docenter = false;
+			if ($.isFunction(_o.on_g_leave)) { _o.on_g_leave($e); }
+			_o.docenter = false;
 			break;
 	}
 	return false;
 };
 
 $.fn.dropup.drop_handler = function($e) {
-	var _o = $opts;
+	var _o = $.fn.dropup.opts;
 	if ($.isFunction(_o.on_drop)) {
 		_o.on_drop($e);
 	}
@@ -89,28 +93,29 @@ $.fn.dropup.drop_handler = function($e) {
 };
 
 $.fn.dropup.upload = function($files) {
-	var _i;
+	var _i,
+		_o = $.fn.dropup.opts;
 
 	if (!$files) {
-		$opts.error(201, 'Browser does not support drag-n-drop');
+		_o.error(201, 'Browser does not support drag-n-drop');
 		return false;
 	}
 
-	if ($files.length > $opts.max_files) {
-		$opts.error(202, 'Only ' + $opts.max_files + ' files allowed');
+	if ($files.length > _o.max_files) {
+		_o.error(202, 'Only ' + _o.max_files + ' files allowed');
 		_o.good_count = 0;
 		_o.bad_count = 0;
-		$opts.on_complete();
+		_o.on_complete();
 		return false;
 	}
 
 	for (_i = 0; _i < $files.length; _i++) {
-		if ($opts.abort) {
+		if (_o.abort) {
 			return false;
 		}
 
 		try {
-			if ($opts.on_before_start($files[_i]) !== false) {
+			if (_o.on_before_start($files[_i]) !== false) {
 				if (_i === $files.length) {
 					return true;
 				}
@@ -121,11 +126,13 @@ $.fn.dropup.upload = function($files) {
 				_reader.file = $files[_i];
 				_reader.len = $files.length;
 
-				if (_reader.file.size > $opts.max_file_size) {
-					$opts.error(203, _reader.file.size);
-					$opts.bad_count++;
-					if ($opts.bad_count + $opts.good_count === $files.length) {
-						$opts.on_complete();
+				if (_reader.file.size > _o.max_file_size) {
+					_o.error(203,
+						_reader.file.size + ' is larger than ' +
+						_o.max_file_size);
+					_o.bad_count++;
+					if (_o.bad_count + _o.good_count === $files.length) {
+						_o.on_complete();
 						_o.good_count = 0; _o.bad_count = 0;
 					}
 				} else {
@@ -133,10 +140,10 @@ $.fn.dropup.upload = function($files) {
 					_reader.readAsBinaryString($files[_i]);
 				}
 			} else {
-				$opts.bad_count++;
+				_o.bad_count++;
 			}
 		} catch ($err) {
-			$opts.error(201, $err);
+			_o.error(201, $err);
 			return false;
 		}
 	}
@@ -144,7 +151,7 @@ $.fn.dropup.upload = function($files) {
 };
 
 $.fn.dropup.send_handler = function($e) {
-	var _o = $opts;
+	var _o = $.fn.dropup.opts;
 
 	var _xhr = new XMLHttpRequest(),
 		_u = _xhr.upload,
@@ -160,7 +167,7 @@ $.fn.dropup.send_handler = function($e) {
 
 	if (window.FormData) {
 		var _fd = new FormData();
-		$.each($opts.params, function($k) {
+		$.each(_o.params, function($k) {
 			_fd.append($k, this);
 		});
 		_fd.append(_o.name, $e.target.file);
@@ -172,7 +179,7 @@ $.fn.dropup.send_handler = function($e) {
 			cr = '\r\n',
 			_builder = '';
 
-		//$.each($opts.params,function($k){
+		//$.each(_o.params,function($k){
 		//	_builder = dd + b + cr
 		//		+ 'Content-Disposition: form-data; name="'+$k+'"'
 		//		+ cr + this + cr + dd + b + cr;
@@ -220,7 +227,7 @@ $.fn.dropup.send_handler = function($e) {
 };
 
 $.fn.dropup.progress_handler = function($e) {
-	var _o = $opts;
+	var _o = $.fn.dropup.opts;
 	if (!$e.lengthComputable) {
 		return false;
 	}
