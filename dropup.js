@@ -5,10 +5,10 @@ $.fn.dropup = function($o) {
 	_o.max_file_size = _o.max_file_size * 1048576;
 	this.get(0).addEventListener('drop', $.fn.dropup.drop_handler, true);
 
-	$(this).bind('dragenter dragover dragleave',
+	$(this).bind('dragenter dragover dragleave dragexit',
 		$.fn.dropup.local_handlers);
 
-	$('body').bind('drop dragenter dragover dragleave',
+	$('body').bind('drop dragenter dragover dragleave dragexit',
 		$.fn.dropup.global_handlers);
 
 	$.fn.dropup.opts = _o;
@@ -43,6 +43,7 @@ $.fn.dropup.local_handlers = function($e) {
 			if ($.isFunction(_o.on_g_over)) { _o.on_g_over($e); }
 			if ($.isFunction(_o.on_over)) { _o.on_over($e); }
 			break;
+		case 'dragexit':
 		case 'dragleave':
 			clearTimeout(_o.timer);
 			if ($.isFunction(_o.on_leave)) { _o.on_leave($e); }
@@ -68,10 +69,12 @@ $.fn.dropup.global_handlers = function($e) {
 			$e.preventDefault();
 			if ($.isFunction(_o.on_g_over)) { _o.on_g_over($e); }
 			break;
+		case 'dragexit':
 		case 'dragleave':
 			_o.timer = setTimeout(function() {
 				if ($.isFunction(_o.on_g_leave)) { _o.on_g_leave($e); }
 			},200);
+			_o.docenter = false;
 			break;
 		case 'drop':
 			if ($.isFunction(_o.on_g_leave)) { _o.on_g_leave($e); }
@@ -168,7 +171,7 @@ $.fn.dropup.send_handler = function($e) {
 	if (window.FormData) {
 		var _fd = new FormData();
 		$.each(_o.params, function($k) {
-			_fd.append($k, this);
+			_fd.append($k, this.toString());
 		});
 		_fd.append(_o.name, $e.target.file);
 
